@@ -2,9 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "PromptTandem",
-  description:
-    "Turn vague ideas into well-structured, ready-to-run prompts.",
+  title: "Lucidraft",
+  description: "Rough idea in. Polished prompt out.",
 };
 
 export default function RootLayout({
@@ -21,9 +20,9 @@ export default function RootLayout({
           href="https://fonts.gstatic.com"
           crossOrigin="anonymous"
         />
-        {/* Clean neutral grotesk for UI · JetBrains Mono for prompts */}
+        {/* Hanken Grotesk for UI · JetBrains Mono for the brand wordmark + prompts */}
         <link
-          href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
       </head>

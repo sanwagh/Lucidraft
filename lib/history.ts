@@ -10,6 +10,8 @@
  * would need a backend (intentionally out of scope for v1).
  */
 
+import type { DispatchResultDTO } from "./clientTypes";
+
 /** A persisted chat message (mirrors the client's TranscriptMessage shape). */
 export interface HistoryMessage {
   id: string;
@@ -17,6 +19,9 @@ export interface HistoryMessage {
   content: string;
   /** Set on assistant "ready" turns — the proposed prompt. */
   prompt?: string | null;
+  /** Decision state for a prompt-bearing message, persisted across reloads. */
+  denied?: boolean;
+  dispatch?: DispatchResultDTO | null;
 }
 
 export interface Conversation {

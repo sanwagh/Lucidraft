@@ -8,6 +8,25 @@ interface SidebarProps {
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
+  onClose: () => void;
+}
+
+/** A small "panel" glyph used for the collapse/expand toggle. */
+function PanelIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-[18px] w-[18px]"
+    >
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M9 4v16" />
+    </svg>
+  );
 }
 
 /**
@@ -20,14 +39,30 @@ export function Sidebar({
   onSelect,
   onNew,
   onDelete,
+  onClose,
 }: SidebarProps) {
   return (
     <aside className="hidden h-full w-64 shrink-0 flex-col border-r border-zinc-800 bg-zinc-950 md:flex">
-      {/* Brand */}
-      <div className="px-4 pb-4 pt-5">
-        <span className="font-display text-[15px] font-semibold tracking-tight text-zinc-100">
-          PromptTandem
-        </span>
+      {/* Brand + collapse toggle */}
+      <div className="flex items-center justify-between px-4 pb-4 pt-4">
+        <div className="flex items-center gap-2">
+          {/* LD monogram — light badge, accent "D" */}
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-100 font-brand text-[11px] font-bold leading-none tracking-tight shadow-sm">
+            <span className="text-zinc-900">L</span>
+            <span className="text-emerald-600">D</span>
+          </span>
+          <span className="font-brand text-[16px] font-semibold tracking-tight text-zinc-50">
+            Lucidraft
+          </span>
+        </div>
+        <button
+          onClick={onClose}
+          aria-label="Collapse sidebar"
+          title="Collapse sidebar"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-zinc-500 transition-colors duration-200 hover:bg-zinc-800 hover:text-zinc-200"
+        >
+          <PanelIcon />
+        </button>
       </div>
 
       <div className="px-3 pb-1">

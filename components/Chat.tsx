@@ -8,7 +8,7 @@ import type {
 } from "@/lib/clientTypes";
 import { MessageBubble } from "./MessageBubble";
 import { ChatInput } from "./ChatInput";
-import { ProposedPrompt } from "./ProposedPrompt";
+import { ProposedPrompt, type PromptState } from "./ProposedPrompt";
 import { Sidebar } from "./Sidebar";
 import {
   type Conversation,
@@ -17,16 +17,15 @@ import {
   saveConversations,
 } from "@/lib/history";
 
-/** A ChatMessage that may carry the full proposed prompt for model context. */
+/**
+ * A chat message. Assistant "ready" turns carry the drafted `prompt`; once the
+ * user decides, `denied` or `dispatch` records the outcome — all persisted, so
+ * prompt cards stay in the conversation and survive reloads.
+ */
 interface TranscriptMessage extends ChatMessage {
-  /** Set on assistant "ready" turns so revisions keep full context. */
   prompt?: string | null;
-}
-
-/** The prompt currently awaiting Approve/Deny, plus its dispatch outcome. */
-interface ActiveProposal {
-  prompt: string;
-  dispatch: DispatchResultDTO | null;
+  denied?: boolean;
+  dispatch?: DispatchResultDTO | null;
 }
 
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -69,7 +68,6 @@ function validatePath(raw: string): string | null {
 
 export function Chat() {
   const [messages, setMessages] = useState<TranscriptMessage[]>([]);
-  const [proposal, setProposal] = useState<ActiveProposal | null>(null);
   const [loading, setLoading] = useState(false);
   const [dispatching, setDispatching] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,6 +83,7 @@ export function Chat() {
   // Saved conversation history (left sidebar) and which one is open.
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -94,13 +93,27 @@ export function Chat() {
       .then((r) => r.json())
       .then((c) => setDispatcher(c?.dispatcher ?? null))
       .catch(() => setDispatcher(null));
+    let savedActive: string | null = null;
     try {
       const saved = localStorage.getItem("tandem.cwd");
       if (saved) setCwd(saved);
+      const sb = localStorage.getItem("tandem.sidebarOpen");
+      if (sb !== null) setSidebarOpen(sb === "1");
+      savedActive = localStorage.getItem("tandem.activeId");
     } catch {
       // localStorage may be unavailable; ignore.
     }
-    setConversations(loadConversations());
+    const convs = loadConversations();
+    setConversations(convs);
+    // Restore the conversation you were last viewing — with each prompt's
+    // decision state intact — so a refresh doesn't drop you back to a blank chat.
+    if (savedActive) {
+      const conv = convs.find((c) => c.id === savedActive);
+      if (conv) {
+        setActiveId(conv.id);
+        setMessages(conv.messages);
+      }
+    }
   }, []);
 
   // Upsert the current conversation into history whenever the transcript grows,
@@ -141,13 +154,36 @@ export function Chat() {
     }
   };
 
+  // Remember which conversation is open so a refresh can restore it.
+  const persistActiveId = (id: string | null) => {
+    try {
+      if (id) localStorage.setItem("tandem.activeId", id);
+      else localStorage.removeItem("tandem.activeId");
+    } catch {
+      // ignore
+    }
+  };
+
+  // Collapse / expand the chat-history sidebar (remembered across reloads).
+  const toggleSidebar = () => {
+    setSidebarOpen((v) => {
+      const next = !v;
+      try {
+        localStorage.setItem("tandem.sidebarOpen", next ? "1" : "0");
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
+
   // Auto-scroll to the newest message / state change.
   useEffect(() => {
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,
       behavior: "smooth",
     });
-  }, [messages, proposal, loading]);
+  }, [messages, loading]);
 
   /** Build the history we send to the model: include proposed prompts so the
    * model can revise them, and merge isn't needed here (route handles roles). */
@@ -185,12 +221,6 @@ export function Chat() {
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
-
-      if (turn.status === "ready" && turn.prompt) {
-        setProposal({ prompt: turn.prompt, dispatch: null });
-      } else {
-        setProposal(null);
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
@@ -198,13 +228,15 @@ export function Chat() {
     }
   };
 
-  /** User submits a chat message. */
+  /** User submits a chat message. Past prompt cards stay in the transcript. */
   const handleSend = (text: string) => {
     // Ensure the conversation has an id before any message is stored.
-    if (!activeId) setActiveId(uid());
+    if (!activeId) {
+      const id = uid();
+      setActiveId(id);
+      persistActiveId(id);
+    }
     const userMsg: TranscriptMessage = { id: uid(), role: "user", content: text };
-    // Any pending proposal is superseded once the user keeps talking.
-    setProposal(null);
     const next = [...messages, userMsg];
     setMessages(next);
     void requestAssistant(next);
@@ -213,27 +245,21 @@ export function Chat() {
   /** Start a fresh conversation. */
   const newChat = () => {
     setActiveId(null);
+    persistActiveId(null);
     setMessages([]);
-    setProposal(null);
     setError(null);
     setCwdError(null);
   };
 
-  /** Open a saved conversation and restore its proposed-prompt card. */
+  /** Open a saved conversation. Prompt cards reconstruct from the messages. */
   const loadConversation = (id: string) => {
     const conv = conversations.find((c) => c.id === id);
     if (!conv) return;
     setActiveId(id);
+    persistActiveId(id);
     setMessages(conv.messages);
     setError(null);
     setCwdError(null);
-    // Re-show the last drafted prompt (if any) so it can be re-approved.
-    const lastWithPrompt = [...conv.messages]
-      .reverse()
-      .find((m) => m.role === "assistant" && m.prompt);
-    setProposal(
-      lastWithPrompt?.prompt ? { prompt: lastWithPrompt.prompt, dispatch: null } : null
-    );
   };
 
   /** Delete a saved conversation. */
@@ -246,12 +272,11 @@ export function Chat() {
     if (activeId === id) newChat();
   };
 
-  /** Approve → validate the folder (if needed), then dispatch the prompt. */
-  const handleApprove = async () => {
-    if (!proposal || dispatching) return;
+  /** Approve a specific prompt → validate the folder (if needed), then dispatch. */
+  const handleApprove = async (id: string, prompt: string) => {
+    if (dispatching) return;
 
     // Validate the project directory up front when the dispatcher needs one.
-    // On failure we mark the field red and stop — fix it and click Approve again.
     if (requiresCwd) {
       const err = validatePath(cwd);
       if (err) {
@@ -267,17 +292,19 @@ export function Chat() {
       const res = await fetch("/api/dispatch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: proposal.prompt, cwd: cwd.trim() || undefined }),
+        body: JSON.stringify({ prompt, cwd: cwd.trim() || undefined }),
       });
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data?.error || `Dispatch failed (${res.status}).`);
       }
-      setProposal((p) => (p ? { ...p, dispatch: data as DispatchResultDTO } : p));
+      const result = data as DispatchResultDTO;
+      setMessages((prev) =>
+        prev.map((m) => (m.id === id ? { ...m, dispatch: result } : m))
+      );
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Dispatch failed.";
-      // Route folder/path failures (e.g. "directory doesn't exist") to the
-      // path field; anything else goes to the general error banner.
+      // Route folder/path failures to the path field; else the error banner.
       if (requiresCwd && /director|folder|path/i.test(msg)) {
         setCwdError(msg);
       } else {
@@ -288,12 +315,10 @@ export function Chat() {
     }
   };
 
-  /** Deny → ask the user what to change, then loop back through the model. */
-  const handleDeny = () => {
-    if (!proposal) return;
-    setProposal(null);
+  /** Deny a specific prompt → mark it read-only and ask what to change. */
+  const handleDeny = (id: string) => {
     setMessages((prev) => [
-      ...prev,
+      ...prev.map((m) => (m.id === id ? { ...m, denied: true } : m)),
       {
         id: uid(),
         role: "assistant",
@@ -308,76 +333,121 @@ export function Chat() {
     messages.length > 0 &&
     messages[messages.length - 1].content.startsWith("No problem");
 
+  // Index of the most recent prompt-bearing message — only that one stays
+  // interactive (until decided); earlier ones render read-only.
+  let lastPromptIndex = -1;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].prompt) {
+      lastPromptIndex = i;
+      break;
+    }
+  }
+
   return (
     <div className="flex h-full">
-      <Sidebar
-        conversations={conversations}
-        activeId={activeId}
-        onSelect={loadConversation}
-        onNew={newChat}
-        onDelete={deleteConversation}
-      />
+      {sidebarOpen && (
+        <Sidebar
+          conversations={conversations}
+          activeId={activeId}
+          onSelect={loadConversation}
+          onNew={newChat}
+          onDelete={deleteConversation}
+          onClose={toggleSidebar}
+        />
+      )}
 
-      <div className="flex h-full flex-1 flex-col">
-      {/* Transcript */}
-      <div
-        ref={scrollRef}
-        className="tandem-scroll flex-1 overflow-y-auto px-6 py-8"
-      >
-        {showEmptyState ? (
-          <div className="flex min-h-full items-center justify-center pb-16">
-            <EmptyState />
-          </div>
-        ) : (
-          <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-            {messages.map((m) => (
-              <MessageBubble key={m.id} message={m} />
-            ))}
-
-            {proposal && (
-              <ProposedPrompt
-                prompt={proposal.prompt}
-                dispatch={proposal.dispatch}
-                isDispatching={dispatching}
-                showCwd={requiresCwd}
-                cwd={cwd}
-                cwdError={cwdError}
-                onCwdChange={updateCwd}
-                onApprove={handleApprove}
-                onDeny={handleDeny}
-              />
-            )}
-
-            {loading && <ThinkingBubble />}
-
-            {error && (
-              <div className="animate-rise rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300 shadow-sm">
-                {error}
+      <div className="relative flex h-full flex-1 flex-col">
+        {!sidebarOpen && (
+          <button
+            onClick={toggleSidebar}
+            aria-label="Open sidebar"
+            title="Open sidebar"
+            className="absolute left-3 top-3 z-10 hidden h-8 w-8 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-400 transition-colors duration-200 hover:bg-zinc-800 hover:text-zinc-200 md:flex"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-[18px] w-[18px]"
+            >
+              <rect x="3" y="4" width="18" height="16" rx="2" />
+              <path d="M9 4v16" />
+            </svg>
+          </button>
+        )}
+        {/* Transcript */}
+        <div
+          ref={scrollRef}
+          className="tandem-scroll flex-1 overflow-y-auto px-6 py-8"
+        >
+          {showEmptyState ? (
+            <div className="mx-auto flex min-h-full w-full max-w-2xl flex-col items-center justify-center gap-9 pb-16">
+              <EmptyState />
+              <div className="w-full">
+                <ChatInput
+                  disabled={loading}
+                  placeholder="Describe what you want to build…"
+                  onSend={handleSend}
+                />
               </div>
-            )}
+            </div>
+          ) : (
+            <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+              {messages.map((m, i) => {
+                if (!m.prompt) {
+                  return <MessageBubble key={m.id} message={m} />;
+                }
+                const isLast = i === lastPromptIndex;
+                const state: PromptState = m.dispatch
+                  ? "dispatched"
+                  : isLast && !m.denied
+                  ? "active"
+                  : m.denied && isLast
+                  ? "denied"
+                  : "superseded";
+                return (
+                  <ProposedPrompt
+                    key={m.id}
+                    prompt={m.prompt}
+                    state={state}
+                    dispatch={m.dispatch}
+                    isDispatching={dispatching}
+                    showCwd={requiresCwd}
+                    cwd={cwd}
+                    cwdError={cwdError}
+                    onCwdChange={updateCwd}
+                    onApprove={() => handleApprove(m.id, m.prompt as string)}
+                    onDeny={() => handleDeny(m.id)}
+                  />
+                );
+              })}
+
+              {loading && <ThinkingBubble />}
+
+              {error && (
+                <div className="animate-rise rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300 shadow-sm">
+                  {error}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Composer — docks at the bottom once a conversation has started. */}
+        {!showEmptyState && (
+          <div className="bg-zinc-900 px-6 pb-7 pt-2">
+            <div className="animate-settle mx-auto w-full max-w-3xl">
+              <ChatInput
+                disabled={loading}
+                placeholder={denyAsked ? "Tell me what to change…" : "Reply…"}
+                onSend={handleSend}
+              />
+            </div>
           </div>
         )}
-      </div>
-
-      {/* Composer */}
-      <div className="border-t border-zinc-800 bg-zinc-900 px-6 py-5">
-        <div className="mx-auto w-full max-w-3xl">
-          <ChatInput
-            disabled={loading}
-            placeholder={
-              denyAsked
-                ? "Tell me what to change…"
-                : messages.length > 0
-                ? "Reply…"
-                : undefined
-            }
-            onSend={handleSend}
-          />
-          <p className="mt-2.5 text-center text-[11px] text-zinc-600">
-            Approve to dispatch · Enter to send
-          </p>
-        </div>
-      </div>
       </div>
     </div>
   );
@@ -386,12 +456,16 @@ export function Chat() {
 function EmptyState() {
   return (
     <div className="flex flex-col items-center px-6 text-center">
-      <h1 className="font-display text-3xl font-semibold tracking-tight text-zinc-100">
-        PromptTandem
+      <h1 className="font-brand text-[3.5rem] font-semibold leading-none tracking-normal text-zinc-50">
+        Luci<span className="text-emerald-400">draft</span>
       </h1>
-      <p className="mt-3 max-w-md text-[15px] leading-relaxed text-zinc-500">
-        Describe a rough idea. I&apos;ll ask any clarifying questions, then draft a
-        polished, ready-to-run prompt you can approve and dispatch.
+
+      <p className="mt-5 text-lg font-medium text-zinc-200">
+        Rough idea in. <span className="text-zinc-400">Polished prompt out.</span>
+      </p>
+      <p className="mt-2.5 max-w-sm text-sm leading-relaxed text-zinc-500">
+        Describe what you want — Lucidraft asks the right questions, then drafts a
+        clean, ready-to-run prompt.
       </p>
     </div>
   );

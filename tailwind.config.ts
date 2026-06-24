@@ -21,6 +21,8 @@ const config: Config = {
           "system-ui",
           "sans-serif",
         ],
+        // Brand wordmark — monospace for a developer-tool / tech feel.
+        brand: ['"JetBrains Mono"', "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
         // Used by the "Proposed Prompt" card and file paths.
         mono: [
           '"JetBrains Mono"',
