@@ -77,8 +77,8 @@ export function Chat() {
   const [cwd, setCwd] = useState("");
   const [cwdError, setCwdError] = useState<string | null>(null);
 
-  // The terminal / claude-cli dispatchers run in a folder; file-queue doesn't.
-  const requiresCwd = dispatcher === "claude-cli" || dispatcher === "terminal";
+  // The claude-cli dispatcher runs in a project folder; file-queue doesn't.
+  const requiresCwd = dispatcher === "claude-cli";
 
   // Saved conversation history (left sidebar) and which one is open.
   const [conversations, setConversations] = useState<Conversation[]>([]);
