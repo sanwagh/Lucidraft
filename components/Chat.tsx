@@ -362,7 +362,7 @@ export function Chat() {
             onClick={toggleSidebar}
             aria-label="Open sidebar"
             title="Open sidebar"
-            className="absolute left-3 top-3 z-10 hidden h-8 w-8 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-400 transition-colors duration-200 hover:bg-zinc-800 hover:text-zinc-200 md:flex"
+            className="absolute left-3 top-3 z-10 hidden h-8 w-8 items-center justify-center rounded-lg border border-ink-700 bg-ink-850 text-ink-400 transition-colors duration-200 hover:bg-ink-800 hover:text-paper md:flex"
           >
             <svg
               viewBox="0 0 24 24"
@@ -381,7 +381,7 @@ export function Chat() {
         {/* Transcript */}
         <div
           ref={scrollRef}
-          className="tandem-scroll flex-1 overflow-y-auto px-6 py-8"
+          className="tandem-scroll tandem-grid flex-1 overflow-y-auto px-6 py-8"
         >
           {showEmptyState ? (
             <div className="mx-auto flex min-h-full w-full max-w-2xl flex-col items-center justify-center gap-9 pb-16">
@@ -428,7 +428,7 @@ export function Chat() {
               {loading && <ThinkingBubble />}
 
               {error && (
-                <div className="animate-rise rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300 shadow-sm">
+                <div className="animate-rise rounded-xl border border-clay/40 bg-clay/10 px-4 py-3 text-sm text-clay-bright shadow-sm">
                   {error}
                 </div>
               )}
@@ -438,7 +438,7 @@ export function Chat() {
 
         {/* Composer — docks at the bottom once a conversation has started. */}
         {!showEmptyState && (
-          <div className="bg-zinc-900 px-6 pb-7 pt-2">
+          <div className="bg-ink-900 px-6 pb-7 pt-2">
             <div className="animate-settle mx-auto w-full max-w-3xl">
               <ChatInput
                 disabled={loading}
@@ -456,16 +456,21 @@ export function Chat() {
 function EmptyState() {
   return (
     <div className="flex flex-col items-center px-6 text-center">
-      <h1 className="font-brand text-[3.5rem] font-semibold leading-none tracking-normal text-zinc-50">
-        Luci<span className="text-emerald-400">draft</span>
+      <span className="font-brand text-[10px] font-bold uppercase tracking-[0.35em] text-paper-faint">
+        Drafting desk for AI agents
+      </span>
+
+      <h1 className="mt-4 font-brand text-[3.25rem] font-bold leading-none tracking-tight text-paper-bright">
+        lucidraft<span className="animate-pulse text-lamp">_</span>
       </h1>
 
-      <p className="mt-5 text-lg font-medium text-zinc-200">
-        Rough idea in. <span className="text-zinc-400">Polished prompt out.</span>
+      <p className="mt-5 text-lg font-medium text-paper-bright">
+        Rough idea in.{" "}
+        <span className="text-paper-dim">Polished prompt out.</span>
       </p>
-      <p className="mt-2.5 max-w-sm text-sm leading-relaxed text-zinc-500">
-        Describe what you want — Lucidraft asks the right questions, then drafts a
-        clean, ready-to-run prompt.
+      <p className="mt-2.5 max-w-sm text-sm leading-relaxed text-paper-dim">
+        Describe what you want — Lucidraft asks the right questions, drafts a
+        clean prompt, and you stamp it ready to run.
       </p>
     </div>
   );
@@ -475,9 +480,9 @@ function ThinkingBubble() {
   return (
     <div className="flex animate-rise justify-start">
       <div className="flex items-center gap-1.5 py-2">
-        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-500 [animation-delay:-0.3s]" />
-        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-500 [animation-delay:-0.15s]" />
-        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-500" />
+        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-lamp/70 [animation-delay:-0.3s]" />
+        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-lamp/70 [animation-delay:-0.15s]" />
+        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-lamp/70" />
       </div>
     </div>
   );

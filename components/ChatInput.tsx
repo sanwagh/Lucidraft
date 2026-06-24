@@ -43,7 +43,7 @@ export function ChatInput({ disabled, placeholder, onSend }: ChatInputProps) {
   const canSend = !disabled && value.trim().length > 0;
 
   return (
-    <div className="rounded-3xl border border-zinc-700/70 bg-zinc-800/70 shadow-xl shadow-black/30 transition-colors duration-200 focus-within:border-zinc-600 focus-within:bg-zinc-800">
+    <div className="rounded-3xl border border-ink-700 bg-ink-750/80 shadow-xl shadow-black/40 transition-colors duration-200 focus-within:border-lamp/50 focus-within:bg-ink-750">
       <textarea
         ref={ref}
         rows={1}
@@ -52,18 +52,18 @@ export function ChatInput({ disabled, placeholder, onSend }: ChatInputProps) {
         onKeyDown={handleKeyDown}
         disabled={disabled}
         placeholder={placeholder || "Describe what you want to build…"}
-        className="tandem-scroll block max-h-60 w-full resize-none bg-transparent px-5 pt-4 text-[15px] leading-relaxed text-zinc-100 placeholder:text-zinc-500 focus:outline-none disabled:opacity-60"
+        className="tandem-scroll block max-h-60 w-full resize-none bg-transparent px-5 pt-4 text-[15px] leading-relaxed text-paper placeholder:text-paper-faint focus:outline-none disabled:opacity-60"
       />
       <div className="flex items-center justify-between gap-2 px-3 pb-3 pt-2">
-        <span className="hidden select-none pl-2 text-[11px] text-zinc-600 sm:block">
-          <span className="text-zinc-500">Enter</span> to send ·{" "}
-          <span className="text-zinc-500">Shift + Enter</span> for a new line
+        <span className="hidden select-none pl-2 font-brand text-[10px] uppercase tracking-[0.12em] text-paper-faint sm:block">
+          <span className="text-paper-dim">Enter</span> to send ·{" "}
+          <span className="text-paper-dim">Shift + Enter</span> newline
         </span>
         <button
           onClick={submit}
           disabled={!canSend}
           aria-label="Send"
-          className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-900 transition-all duration-200 hover:bg-white active:scale-95 disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-500"
+          className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-lamp text-ink-900 transition-all duration-200 hover:bg-lamp-bright active:scale-95 disabled:cursor-not-allowed disabled:bg-ink-700 disabled:text-ink-500"
         >
           <svg
             viewBox="0 0 24 24"

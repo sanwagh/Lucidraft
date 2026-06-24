@@ -20,9 +20,9 @@ export default function RootLayout({
           href="https://fonts.gstatic.com"
           crossOrigin="anonymous"
         />
-        {/* Hanken Grotesk for UI · JetBrains Mono for the brand wordmark + prompts */}
+        {/* Hanken Grotesk for UI · Space Mono for the wordmark + stamps · JetBrains Mono for prompt code */}
         <link
-          href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
       </head>

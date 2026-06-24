@@ -12,7 +12,19 @@ body {
 }
 
 body {
-  @apply bg-zinc-900 font-sans text-zinc-100 antialiased;
+  @apply bg-ink-900 font-sans text-paper antialiased;
+}
+
+/* Ambient drafting-desk atmosphere — a near-subliminal dot grid, like the
+   faint ruling on a sheet of graph paper. Quiet enough that the stamp on the
+   prompt card stays the one bold thing on screen. */
+.tandem-grid {
+  background-image: radial-gradient(
+    rgba(110, 126, 154, 0.06) 1px,
+    transparent 1px
+  );
+  background-size: 22px 22px;
+  background-position: -1px -1px;
 }
 
 /* Thin, unobtrusive scrollbar. */
@@ -21,10 +33,10 @@ body {
   height: 8px;
 }
 .tandem-scroll::-webkit-scrollbar-thumb {
-  @apply rounded-full bg-zinc-800;
+  @apply rounded-full bg-ink-700;
 }
 .tandem-scroll::-webkit-scrollbar-thumb:hover {
-  @apply bg-zinc-700;
+  @apply bg-ink-600;
 }
 .tandem-scroll::-webkit-scrollbar-track {
   background: transparent;
@@ -60,9 +72,30 @@ body {
   animation: tandem-settle 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* The stamp landing on the proof — a quick press-in, like an ink stamp meeting
+   paper. Used on the Proposed Prompt state badge. */
+@keyframes tandem-stamp {
+  0% {
+    opacity: 0;
+    transform: rotate(-3deg) scale(1.6);
+  }
+  60% {
+    opacity: 1;
+    transform: rotate(-3deg) scale(0.94);
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(-3deg) scale(1);
+  }
+}
+.animate-stamp {
+  animation: tandem-stamp 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-rise,
-  .animate-settle {
+  .animate-settle,
+  .animate-stamp {
     animation: none;
   }
 }
