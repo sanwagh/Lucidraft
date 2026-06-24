@@ -13,7 +13,7 @@ interface ProposedPromptProps {
   dispatch?: DispatchResultDTO | null;
   /** Whether an approve request is currently in flight. */
   isDispatching: boolean;
-  /** Show the working-directory field (claude-cli / terminal dispatchers). */
+  /** Show the working-directory field (claude-cli dispatcher only). */
   showCwd?: boolean;
   cwd?: string;
   cwdError?: string | null;
@@ -38,24 +38,28 @@ function CheckIcon({ className = "h-4 w-4" }: { className?: string }) {
   );
 }
 
-function RefreshIcon({ className = "h-4 w-4" }: { className?: string }) {
+function ClipboardIcon({ className = "h-[15px] w-[15px]" }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={2.2}
+      strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
     >
-      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
-      <path d="M21 3v6h-6" />
+      <rect x="9" y="9" width="13" height="13" rx="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
     </svg>
   );
 }
 
-function CopyButton({ value }: { value: string }) {
+/**
+ * Copy-to-clipboard control. Icon-only by default (header); pass `label` for a
+ * full button (used as the primary action once a prompt is approved).
+ */
+function CopyButton({ value, label }: { value: string; label?: string }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     try {
@@ -66,6 +70,19 @@ function CopyButton({ value }: { value: string }) {
       // Clipboard can be blocked in some contexts; fail quietly.
     }
   };
+
+  if (label) {
+    return (
+      <button
+        onClick={copy}
+        className="flex items-center gap-2 rounded-lg bg-lamp px-4 py-2.5 text-sm font-semibold text-ink-900 transition-colors duration-200 hover:bg-lamp-bright active:scale-[0.99]"
+      >
+        {copied ? <CheckIcon className="h-4 w-4" /> : <ClipboardIcon className="h-4 w-4" />}
+        {copied ? "Copied!" : label}
+      </button>
+    );
+  }
+
   return (
     <button
       onClick={copy}
@@ -76,18 +93,7 @@ function CopyButton({ value }: { value: string }) {
       {copied ? (
         <CheckIcon className="h-[15px] w-[15px] text-lamp" />
       ) : (
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-[15px] w-[15px]"
-        >
-          <rect x="9" y="9" width="13" height="13" rx="2" />
-          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-        </svg>
+        <ClipboardIcon />
       )}
     </button>
   );
@@ -185,28 +191,19 @@ export function ProposedPrompt({
         <div className="px-4 pb-4 pt-3.5">
           <p className="flex items-center gap-2 text-sm font-medium text-lamp">
             <CheckIcon />
-            Sent to your coding agent
+            Approved
+          </p>
+          <p className="mt-1.5 text-sm text-paper-dim">
+            Copy the prompt and paste it into Claude (or your coding agent).
           </p>
           {dispatch && (
-            <>
-              <p className="mt-1.5 break-all font-mono text-xs text-paper-dim">
-                {dispatch.location}
-              </p>
-              <p className="mt-1 font-mono text-[11px] text-paper-faint">
-                id {dispatch.id} · {dispatch.status}
-              </p>
-            </>
+            <p className="mt-1.5 break-all font-mono text-[11px] text-paper-faint">
+              saved · {dispatch.location}
+            </p>
           )}
-          {/* Re-dispatch the same prompt — opens a fresh terminal (or starts a
-              new headless run) without having to redraft. */}
-          <button
-            onClick={onApprove}
-            disabled={isDispatching}
-            className="mt-3 flex items-center gap-2 rounded-lg border border-ink-700 px-3 py-2 text-sm font-medium text-paper-dim transition-colors duration-200 hover:border-lamp/40 hover:bg-ink-700/50 hover:text-paper active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <RefreshIcon className="h-4 w-4" />
-            {isDispatching ? "Launching…" : "Run again"}
-          </button>
+          <div className="mt-3">
+            <CopyButton value={prompt} label="Copy prompt" />
+          </div>
         </div>
       ) : state === "denied" ? (
         <div className="px-4 pb-4 pt-3">
