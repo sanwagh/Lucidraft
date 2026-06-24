@@ -26,6 +26,8 @@ import { spawn } from "node:child_process";
 import { promises as fs, openSync } from "node:fs";
 import path from "node:path";
 import type { Dispatcher, DispatchOptions, DispatchResult } from "./types";
+import { resolveClaudeBin, augmentedPath } from "./resolveBin";
+import { writeProjectClaudeMd } from "./projectFile";
 
 function makeId(date: Date): string {
   return date.toISOString().replace(/[:.]/g, "-");
@@ -67,6 +69,15 @@ export class ClaudeCliDispatcher implements Dispatcher {
       );
     }
 
+    // Record the prompt in the project's own CLAUDE.md (in the target folder).
+    await writeProjectClaudeMd(cwd, prompt, id, createdAt);
+
+    // Resolve the CLI to an absolute path BEFORE spawning. A production server's
+    // minimal PATH often omits ~/.local/bin, so `spawn("claude")` would ENOENT
+    // async (after we've returned) and the run would silently never start.
+    // Resolving here means a missing CLI surfaces as a clear error in the UI.
+    const bin = resolveClaudeBin(this.bin);
+
     await fs.mkdir(this.logDir, { recursive: true });
     const logPath = path.join(this.logDir, `${id}.log`);
 
@@ -84,14 +95,17 @@ export class ClaudeCliDispatcher implements Dispatcher {
     const fd = openSync(logPath, "a");
     let child;
     try {
-      child = spawn(this.bin, args, {
+      child = spawn(bin, args, {
         cwd,
         detached: true,
         stdio: ["ignore", fd, fd],
+        // Give Claude a PATH that can find node/git even under a minimal
+        // service environment (systemd/pm2), where the inherited PATH is sparse.
+        env: { ...process.env, PATH: augmentedPath(bin) },
       });
     } catch (err) {
       throw new Error(
-        `Could not launch \`${this.bin}\`. Is the Claude Code CLI installed and on PATH? — ${
+        `Could not launch \`${bin}\`. Is the Claude Code CLI installed? — ${
           (err as Error).message
         }`
       );

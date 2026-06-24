@@ -19,6 +19,8 @@ import { spawn, execFileSync } from "node:child_process";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { Dispatcher, DispatchOptions, DispatchResult } from "./types";
+import { resolveClaudeBin, augmentedPath } from "./resolveBin";
+import { writeProjectClaudeMd } from "./projectFile";
 
 function makeId(date: Date): string {
   return date.toISOString().replace(/[:.]/g, "-");
@@ -73,6 +75,15 @@ export class TerminalDispatcher implements Dispatcher {
       );
     }
 
+    // Record the prompt in the project's own CLAUDE.md (in the target folder).
+    await writeProjectClaudeMd(cwd, prompt, id, createdAt);
+
+    // Resolve the CLI to an absolute path now — a built/production server's PATH
+    // usually omits ~/.local/bin, so a bare `claude` would never be found by the
+    // window we open. Surfaces a clear error in the UI if the CLI is missing.
+    const bin = resolveClaudeBin(this.bin);
+    const binPath = augmentedPath(bin);
+
     await fs.mkdir(this.queueDir, { recursive: true });
 
     // Write the prompt to a file so prompt contents never need shell-quoting.
@@ -82,13 +93,13 @@ export class TerminalDispatcher implements Dispatcher {
     let location: string;
     switch (process.platform) {
       case "darwin":
-        location = await this.launchMac(id, cwd, promptPath);
+        location = await this.launchMac(id, cwd, promptPath, bin, binPath);
         break;
       case "win32":
-        location = await this.launchWindows(id, cwd, promptPath);
+        location = await this.launchWindows(id, cwd, promptPath, bin, binPath);
         break;
       default:
-        location = await this.launchLinux(id, cwd, promptPath);
+        location = await this.launchLinux(id, cwd, promptPath, bin, binPath);
         break;
     }
 
@@ -96,11 +107,18 @@ export class TerminalDispatcher implements Dispatcher {
   }
 
   /** macOS: executable .command opened in Terminal.app (the default handler). */
-  private async launchMac(id: string, cwd: string, promptPath: string): Promise<string> {
+  private async launchMac(
+    id: string,
+    cwd: string,
+    promptPath: string,
+    bin: string,
+    binPath: string
+  ): Promise<string> {
     const commandPath = path.join(this.queueDir, `${id}.command`);
     const script = `#!/bin/bash
+export PATH=${bashQuote(binPath)}
 cd ${bashQuote(cwd)} || exit 1
-${bashQuote(this.bin)} "$(cat ${bashQuote(promptPath)})"
+${bashQuote(bin)} "$(cat ${bashQuote(promptPath)})"
 `;
     await fs.writeFile(commandPath, script, "utf8");
     await fs.chmod(commandPath, 0o755);
@@ -109,11 +127,18 @@ ${bashQuote(this.bin)} "$(cat ${bashQuote(promptPath)})"
   }
 
   /** Windows: PowerShell script opened in a new window via `start`. */
-  private async launchWindows(id: string, cwd: string, promptPath: string): Promise<string> {
+  private async launchWindows(
+    id: string,
+    cwd: string,
+    promptPath: string,
+    bin: string,
+    binPath: string
+  ): Promise<string> {
     const ps1Path = path.join(this.queueDir, `${id}.ps1`);
-    const script = `Set-Location -LiteralPath ${psQuote(cwd)}
+    const script = `$env:Path = ${psQuote(binPath)}
+Set-Location -LiteralPath ${psQuote(cwd)}
 $prompt = Get-Content -Raw -LiteralPath ${psQuote(promptPath)}
-& ${psQuote(this.bin)} $prompt
+& ${psQuote(bin)} $prompt
 `;
     await fs.writeFile(ps1Path, script, "utf8");
     // `start "" powershell ...` opens a fresh console window; -NoExit keeps it.
@@ -126,21 +151,41 @@ $prompt = Get-Content -Raw -LiteralPath ${psQuote(promptPath)}
   }
 
   /** Linux: a .sh run in the first available terminal emulator. */
-  private async launchLinux(id: string, cwd: string, promptPath: string): Promise<string> {
+  private async launchLinux(
+    id: string,
+    cwd: string,
+    promptPath: string,
+    bin: string,
+    binPath: string
+  ): Promise<string> {
     const shPath = path.join(this.queueDir, `${id}.sh`);
     const script = `#!/bin/bash
+export PATH=${bashQuote(binPath)}
 cd ${bashQuote(cwd)} || exit 1
-${bashQuote(this.bin)} "$(cat ${bashQuote(promptPath)})"
+${bashQuote(bin)} "$(cat ${bashQuote(promptPath)})"
 exec bash
 `;
     await fs.writeFile(shPath, script, "utf8");
     await fs.chmod(shPath, 0o755);
 
+    // A headless server (no X/Wayland display) has no terminal to open into.
+    // Fail loudly with the fix rather than spawning a window that can't appear.
+    if (!process.env.DISPLAY && !process.env.WAYLAND_DISPLAY) {
+      throw new Error(
+        `No graphical display on this machine (DISPLAY/WAYLAND_DISPLAY unset), so an ` +
+          `interactive terminal can't be opened — this is the usual case on a home ` +
+          `server. Set TANDEM_DISPATCHER=claude-cli to run Claude Code headless instead ` +
+          `(output streams to ${shPath.replace(/\.sh$/, ".log")}). The launcher script ` +
+          `was still written to ${shPath} if you want to run it manually.`
+      );
+    }
+
     const term =
       process.env.TANDEM_TERMINAL || LINUX_TERMINALS.find((t) => this.onPath(t));
     if (!term) {
       throw new Error(
-        `No terminal emulator found. Set TANDEM_TERMINAL to one, or run the script yourself: bash ${shPath}`
+        `No terminal emulator found. Set TANDEM_TERMINAL to one, switch to ` +
+          `TANDEM_DISPATCHER=claude-cli (headless), or run the script yourself: bash ${shPath}`
       );
     }
     // gnome-terminal uses `-- <cmd>`; most others use `-e <cmd...>`.

@@ -38,6 +38,23 @@ function CheckIcon({ className = "h-4 w-4" }: { className?: string }) {
   );
 }
 
+function RefreshIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+      <path d="M21 3v6h-6" />
+    </svg>
+  );
+}
+
 function CopyButton({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
@@ -54,10 +71,10 @@ function CopyButton({ value }: { value: string }) {
       onClick={copy}
       aria-label={copied ? "Copied" : "Copy prompt"}
       title={copied ? "Copied" : "Copy prompt"}
-      className="flex h-7 w-7 items-center justify-center rounded-md text-zinc-500 transition-colors duration-200 hover:bg-zinc-700/60 hover:text-zinc-200"
+      className="flex h-7 w-7 items-center justify-center rounded-md text-ink-400 transition-colors duration-200 hover:bg-ink-700/60 hover:text-paper"
     >
       {copied ? (
-        <CheckIcon className="h-[15px] w-[15px] text-emerald-400" />
+        <CheckIcon className="h-[15px] w-[15px] text-lamp" />
       ) : (
         <svg
           viewBox="0 0 24 24"
@@ -76,12 +93,49 @@ function CopyButton({ value }: { value: string }) {
   );
 }
 
+/** The rubber-stamp verdict on the proof — the page's signature element. */
+function Stamp({ state }: { state: PromptState }) {
+  const map: Record<PromptState, { label: string; cls: string; press?: boolean }> = {
+    active: {
+      label: "Draft",
+      cls: "border-lamp/55 text-lamp ring-lamp/25 bg-lamp/[0.06]",
+    },
+    dispatched: {
+      label: "Dispatched",
+      cls: "border-lamp text-lamp-bright ring-lamp/40 bg-lamp/10",
+      press: true,
+    },
+    denied: {
+      label: "Revising",
+      cls: "border-clay/55 text-clay-bright ring-clay/25 bg-clay/[0.06]",
+    },
+    superseded: {
+      label: "Superseded",
+      cls: "border-ink-600 text-paper-faint ring-ink-600/30 bg-transparent opacity-80",
+    },
+  };
+  const { label, cls, press } = map[state];
+  return (
+    <span
+      aria-hidden
+      className={[
+        "pointer-events-none select-none rounded-[3px] border-2 px-2.5 py-1 ring-1 ring-inset",
+        "font-brand text-[10px] font-bold uppercase tracking-[0.2em]",
+        "-rotate-3",
+        press ? "animate-stamp" : "",
+        cls,
+      ].join(" ")}
+    >
+      {label}
+    </span>
+  );
+}
+
 /**
- * The "Proposed Prompt" card — an elevated panel with an inset code block for
- * the prompt and a footer that reflects the card's state: active (Approve/Deny),
- * dispatched (confirmation), denied (revision requested), or superseded (an
- * earlier draft that a newer one has replaced). Read-only states stay in the
- * conversation for reference.
+ * The proof sheet — Lucidraft's signature surface. A drafted prompt arrives as a
+ * proof to be marked up: a ruled margin down the prompt body, and a rubber-stamp
+ * verdict in the corner that records the decision (Draft → Dispatched, or
+ * Revising / Superseded). Decided proofs stay in the conversation for reference.
  */
 export function ProposedPrompt({
   prompt,
@@ -100,13 +154,18 @@ export function ProposedPrompt({
   const label = isCurrent ? "Proposed Prompt" : "Previous draft";
 
   return (
-    <div className="animate-rise w-full overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-800 shadow-xl shadow-black/30">
+    <div className="animate-rise relative w-full rounded-2xl border border-ink-700 bg-ink-800 shadow-xl shadow-black/40">
+      {/* Stamp — overhangs the corner like ink pressed onto paper. */}
+      <div className="absolute -right-2.5 -top-3 z-10">
+        <Stamp state={state} />
+      </div>
+
       {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-3.5 pb-2.5">
-        <span className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-zinc-400">
+      <div className="flex items-center justify-between px-4 pb-2.5 pt-3.5 pr-24">
+        <span className="flex items-center gap-2 font-brand text-[10px] font-bold uppercase tracking-[0.18em] text-paper-dim">
           <span
             className={`h-1.5 w-1.5 rounded-full ${
-              isCurrent ? "bg-emerald-500" : "bg-zinc-500"
+              isCurrent ? "bg-lamp" : "bg-ink-500"
             }`}
           />
           {label}
@@ -114,9 +173,9 @@ export function ProposedPrompt({
         <CopyButton value={prompt} />
       </div>
 
-      {/* Prompt — inset rounded code block */}
+      {/* Prompt — inset proof with a ruled drafting margin. */}
       <div className="px-3">
-        <pre className="tandem-scroll max-h-80 overflow-auto rounded-xl border border-zinc-700/60 bg-zinc-950 px-4 py-3.5 font-mono text-[12.5px] leading-relaxed text-zinc-300">
+        <pre className="tandem-scroll max-h-80 overflow-auto rounded-xl border border-ink-700/70 border-l-2 border-l-lamp/25 bg-ink-950 px-4 py-3.5 font-mono text-[12.5px] leading-relaxed text-paper">
           {prompt}
         </pre>
       </div>
@@ -124,38 +183,48 @@ export function ProposedPrompt({
       {/* Footer state */}
       {state === "dispatched" ? (
         <div className="px-4 pb-4 pt-3.5">
-          <p className="flex items-center gap-2 text-sm font-medium text-emerald-400">
+          <p className="flex items-center gap-2 text-sm font-medium text-lamp">
             <CheckIcon />
-            Dispatched
+            Sent to your coding agent
           </p>
           {dispatch && (
             <>
-              <p className="mt-1.5 break-all font-mono text-xs text-zinc-500">
+              <p className="mt-1.5 break-all font-mono text-xs text-paper-dim">
                 {dispatch.location}
               </p>
-              <p className="mt-1 font-mono text-[11px] text-zinc-600">
+              <p className="mt-1 font-mono text-[11px] text-paper-faint">
                 id {dispatch.id} · {dispatch.status}
               </p>
             </>
           )}
+          {/* Re-dispatch the same prompt — opens a fresh terminal (or starts a
+              new headless run) without having to redraft. */}
+          <button
+            onClick={onApprove}
+            disabled={isDispatching}
+            className="mt-3 flex items-center gap-2 rounded-lg border border-ink-700 px-3 py-2 text-sm font-medium text-paper-dim transition-colors duration-200 hover:border-lamp/40 hover:bg-ink-700/50 hover:text-paper active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <RefreshIcon className="h-4 w-4" />
+            {isDispatching ? "Launching…" : "Run again"}
+          </button>
         </div>
       ) : state === "denied" ? (
         <div className="px-4 pb-4 pt-3">
-          <p className="text-sm text-zinc-400">
-            Revision requested — describe the change below and I&apos;ll redraft.
+          <p className="text-sm text-paper-dim">
+            Marked for revision — describe the change below and I&apos;ll redraft.
           </p>
         </div>
       ) : state === "superseded" ? (
         <div className="px-4 pb-4 pt-3">
-          <p className="text-xs text-zinc-500">Replaced by a newer draft.</p>
+          <p className="text-xs text-paper-faint">Replaced by a newer draft.</p>
         </div>
       ) : (
         <div className="px-4 pb-4 pt-3">
           {showCwd && (
             <label className="mb-4 block">
-              <span className="mb-1.5 block text-xs font-medium text-zinc-400">
+              <span className="mb-1.5 block text-xs font-medium text-paper-dim">
                 Project directory{" "}
-                <span className="text-zinc-600">— the folder to run in</span>
+                <span className="text-paper-faint">— the folder to run in</span>
               </span>
               <input
                 type="text"
@@ -166,14 +235,14 @@ export function ProposedPrompt({
                 spellCheck={false}
                 aria-invalid={Boolean(cwdError)}
                 className={[
-                  "w-full rounded-lg border bg-zinc-950 px-3 py-2.5 font-mono text-xs text-zinc-200 placeholder:text-zinc-600 transition-colors duration-200 focus:outline-none disabled:opacity-60",
+                  "w-full rounded-lg border bg-ink-950 px-3 py-2.5 font-mono text-xs text-paper placeholder:text-paper-faint transition-colors duration-200 focus:outline-none disabled:opacity-60",
                   cwdError
-                    ? "border-rose-500/70 focus:border-rose-500"
-                    : "border-zinc-700 focus:border-zinc-500",
+                    ? "border-clay/70 focus:border-clay"
+                    : "border-ink-700 focus:border-ink-500",
                 ].join(" ")}
               />
               {cwdError && (
-                <span className="mt-1.5 block text-xs text-rose-400">
+                <span className="mt-1.5 block text-xs text-clay-bright">
                   {cwdError}
                 </span>
               )}
@@ -183,10 +252,10 @@ export function ProposedPrompt({
             <button
               onClick={onApprove}
               disabled={isDispatching || !isActive}
-              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-emerald-500 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-lamp px-4 py-2.5 text-sm font-semibold text-ink-900 transition-colors duration-200 hover:bg-lamp-bright active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isDispatching ? (
-                "Dispatching…"
+                "Stamping…"
               ) : (
                 <>
                   <CheckIcon />
@@ -197,7 +266,7 @@ export function ProposedPrompt({
             <button
               onClick={onDeny}
               disabled={isDispatching}
-              className="flex-1 rounded-lg border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-300 transition-colors duration-200 hover:bg-zinc-700/60 hover:text-zinc-100 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex-1 rounded-lg border border-ink-700 px-4 py-2.5 text-sm font-medium text-paper-dim transition-colors duration-200 hover:bg-ink-700/60 hover:text-paper active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
             >
               Deny
             </button>
