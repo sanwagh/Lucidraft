@@ -75,10 +75,10 @@ function CopyButton({ value, label }: { value: string; label?: string }) {
     return (
       <button
         onClick={copy}
-        className="flex items-center gap-2 rounded-lg bg-lamp px-4 py-2.5 text-sm font-semibold text-ink-900 transition-colors duration-200 hover:bg-lamp-bright active:scale-[0.99]"
+        className="flex items-center gap-2 rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-surface transition-colors duration-150 hover:bg-white active:scale-[0.99]"
       >
         {copied ? <CheckIcon className="h-4 w-4" /> : <ClipboardIcon className="h-4 w-4" />}
-        {copied ? "Copied!" : label}
+        {copied ? "Copied" : label}
       </button>
     );
   }
@@ -88,10 +88,10 @@ function CopyButton({ value, label }: { value: string; label?: string }) {
       onClick={copy}
       aria-label={copied ? "Copied" : "Copy prompt"}
       title={copied ? "Copied" : "Copy prompt"}
-      className="flex h-7 w-7 items-center justify-center rounded-md text-ink-400 transition-colors duration-200 hover:bg-ink-700/60 hover:text-paper"
+      className="flex h-7 w-7 items-center justify-center rounded-md text-ink-muted transition-colors duration-150 hover:bg-surface-inset hover:text-ink"
     >
       {copied ? (
-        <CheckIcon className="h-[15px] w-[15px] text-lamp" />
+        <CheckIcon className="h-[15px] w-[15px] text-pine" />
       ) : (
         <ClipboardIcon />
       )}
@@ -99,49 +99,28 @@ function CopyButton({ value, label }: { value: string; label?: string }) {
   );
 }
 
-/** The rubber-stamp verdict on the proof — the page's signature element. */
-function Stamp({ state }: { state: PromptState }) {
-  const map: Record<PromptState, { label: string; cls: string; press?: boolean }> = {
-    active: {
-      label: "Draft",
-      cls: "border-lamp/55 text-lamp ring-lamp/25 bg-lamp/[0.06]",
-    },
-    dispatched: {
-      label: "Dispatched",
-      cls: "border-lamp text-lamp-bright ring-lamp/40 bg-lamp/10",
-      press: true,
-    },
-    denied: {
-      label: "Revising",
-      cls: "border-clay/55 text-clay-bright ring-clay/25 bg-clay/[0.06]",
-    },
-    superseded: {
-      label: "Superseded",
-      cls: "border-ink-600 text-paper-faint ring-ink-600/30 bg-transparent opacity-80",
-    },
+/** Status marker in the card header — a small dot and a word, nothing louder. */
+function StatusChip({ state }: { state: PromptState }) {
+  const map: Record<PromptState, { label: string; dot: string; text: string }> = {
+    active: { label: "Draft", dot: "bg-ink-faint", text: "text-ink-muted" },
+    dispatched: { label: "Approved", dot: "bg-pine", text: "text-pine" },
+    denied: { label: "Revising", dot: "bg-red", text: "text-red" },
+    superseded: { label: "Replaced", dot: "bg-ink-faint", text: "text-ink-faint" },
   };
-  const { label, cls, press } = map[state];
+  const { label, dot, text } = map[state];
   return (
-    <span
-      aria-hidden
-      className={[
-        "pointer-events-none select-none rounded-[3px] border-2 px-2.5 py-1 ring-1 ring-inset",
-        "font-brand text-[10px] font-bold uppercase tracking-[0.2em]",
-        "-rotate-3",
-        press ? "animate-stamp" : "",
-        cls,
-      ].join(" ")}
-    >
+    <span className={`flex items-center gap-1.5 text-xs font-medium ${text}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
       {label}
     </span>
   );
 }
 
 /**
- * The proof sheet — Lucidraft's signature surface. A drafted prompt arrives as a
- * proof to be marked up: a ruled margin down the prompt body, and a rubber-stamp
- * verdict in the corner that records the decision (Draft → Dispatched, or
- * Revising / Superseded). Decided proofs stay in the conversation for reference.
+ * A drafted prompt, presented as a document: header row with the status chip
+ * and a copy control, the prompt body in mono on a raised well, and the
+ * decision actions in the footer. Decided drafts stay in the conversation
+ * for reference.
  */
 export function ProposedPrompt({
   prompt,
@@ -157,47 +136,38 @@ export function ProposedPrompt({
 }: ProposedPromptProps) {
   const isActive = state === "active";
   const isCurrent = state === "active" || state === "dispatched";
-  const label = isCurrent ? "Proposed Prompt" : "Previous draft";
+  const label = isCurrent ? "Proposed prompt" : "Previous draft";
 
   return (
-    <div className="animate-rise relative w-full rounded-2xl border border-ink-700 bg-ink-800 shadow-xl shadow-black/40">
-      {/* Stamp — overhangs the corner like ink pressed onto paper. */}
-      <div className="absolute -right-2.5 -top-3 z-10">
-        <Stamp state={state} />
-      </div>
-
+    <div className="animate-rise w-full overflow-hidden rounded-xl border border-line bg-surface-raised">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 pb-2.5 pt-3.5 pr-24">
-        <span className="flex items-center gap-2 font-brand text-[10px] font-bold uppercase tracking-[0.18em] text-paper-dim">
+      <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
+        <span className="flex items-center gap-2.5">
           <span
-            className={`h-1.5 w-1.5 rounded-full ${
-              isCurrent ? "bg-lamp" : "bg-ink-500"
+            className={`text-[13px] font-medium ${
+              isCurrent ? "text-ink" : "text-ink-muted"
             }`}
-          />
-          {label}
+          >
+            {label}
+          </span>
+          <StatusChip state={state} />
         </span>
         <CopyButton value={prompt} />
       </div>
 
-      {/* Prompt — inset proof with a ruled drafting margin. */}
-      <div className="px-3">
-        <pre className="tandem-scroll max-h-80 overflow-auto rounded-xl border border-ink-700/70 border-l-2 border-l-lamp/25 bg-ink-950 px-4 py-3.5 font-mono text-[12.5px] leading-relaxed text-paper">
-          {prompt}
-        </pre>
-      </div>
+      {/* Prompt body */}
+      <pre className="tandem-scroll max-h-80 overflow-auto bg-surface-well px-4 py-3.5 font-mono text-[12.5px] leading-relaxed text-ink-soft">
+        {prompt}
+      </pre>
 
       {/* Footer state */}
       {state === "dispatched" ? (
-        <div className="px-4 pb-4 pt-3.5">
-          <p className="flex items-center gap-2 text-sm font-medium text-lamp">
-            <CheckIcon />
-            Approved
-          </p>
-          <p className="mt-1.5 text-sm text-paper-dim">
+        <div className="border-t border-line px-4 pb-4 pt-3.5">
+          <p className="text-sm text-ink-muted">
             Copy the prompt and paste it into Claude (or your coding agent).
           </p>
           {dispatch && (
-            <p className="mt-1.5 break-all font-mono text-[11px] text-paper-faint">
+            <p className="mt-1.5 break-all font-mono text-[11px] text-ink-faint">
               saved · {dispatch.location}
             </p>
           )}
@@ -206,22 +176,24 @@ export function ProposedPrompt({
           </div>
         </div>
       ) : state === "denied" ? (
-        <div className="px-4 pb-4 pt-3">
-          <p className="text-sm text-paper-dim">
+        <div className="border-t border-line px-4 pb-4 pt-3">
+          <p className="text-sm text-ink-muted">
             Marked for revision — describe the change below and I&apos;ll redraft.
           </p>
         </div>
       ) : state === "superseded" ? (
-        <div className="px-4 pb-4 pt-3">
-          <p className="text-xs text-paper-faint">Replaced by a newer draft.</p>
+        <div className="border-t border-line px-4 pb-3.5 pt-3">
+          <p className="text-xs text-ink-faint">Replaced by a newer draft.</p>
         </div>
       ) : (
-        <div className="px-4 pb-4 pt-3">
+        <div className="border-t border-line px-4 pb-4 pt-3.5">
           {showCwd && (
             <label className="mb-4 block">
-              <span className="mb-1.5 block text-xs font-medium text-paper-dim">
+              <span className="mb-1.5 block text-xs font-medium text-ink-soft">
                 Project directory{" "}
-                <span className="text-paper-faint">— the folder to run in</span>
+                <span className="font-normal text-ink-faint">
+                  — the folder to run in
+                </span>
               </span>
               <input
                 type="text"
@@ -232,16 +204,14 @@ export function ProposedPrompt({
                 spellCheck={false}
                 aria-invalid={Boolean(cwdError)}
                 className={[
-                  "w-full rounded-lg border bg-ink-950 px-3 py-2.5 font-mono text-xs text-paper placeholder:text-paper-faint transition-colors duration-200 focus:outline-none disabled:opacity-60",
+                  "w-full rounded-md border bg-surface-well px-3 py-2.5 font-mono text-xs text-ink placeholder:text-ink-faint transition-colors duration-150 focus:outline-none disabled:opacity-60",
                   cwdError
-                    ? "border-clay/70 focus:border-clay"
-                    : "border-ink-700 focus:border-ink-500",
+                    ? "border-red/60 focus:border-red"
+                    : "border-line focus:border-line-strong",
                 ].join(" ")}
               />
               {cwdError && (
-                <span className="mt-1.5 block text-xs text-clay-bright">
-                  {cwdError}
-                </span>
+                <span className="mt-1.5 block text-xs text-red">{cwdError}</span>
               )}
             </label>
           )}
@@ -249,10 +219,10 @@ export function ProposedPrompt({
             <button
               onClick={onApprove}
               disabled={isDispatching || !isActive}
-              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-lamp px-4 py-2.5 text-sm font-semibold text-ink-900 transition-colors duration-200 hover:bg-lamp-bright active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex flex-1 items-center justify-center gap-2 rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-surface transition-colors duration-150 hover:bg-white active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isDispatching ? (
-                "Stamping…"
+                "Approving…"
               ) : (
                 <>
                   <CheckIcon />
@@ -263,9 +233,9 @@ export function ProposedPrompt({
             <button
               onClick={onDeny}
               disabled={isDispatching}
-              className="flex-1 rounded-lg border border-ink-700 px-4 py-2.5 text-sm font-medium text-paper-dim transition-colors duration-200 hover:bg-ink-700/60 hover:text-paper active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex-1 rounded-md border border-line px-4 py-2 text-[13px] font-medium text-ink-soft transition-colors duration-150 hover:border-line-strong hover:bg-surface-inset hover:text-ink active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Deny
+              Request changes
             </button>
           </div>
         </div>
