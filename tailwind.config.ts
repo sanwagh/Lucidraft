@@ -1,12 +1,12 @@
 import type { Config } from "tailwindcss";
 
 /**
- * Lucidraft — "Inkwell" identity.
+ * Lucidraft — dark "workbench" identity.
  *
- * A drafting desk for AI-agent prompts: deep ink-blue ground, warm paper-cream
- * type, and a single lamplight-amber accent (the complement of the ink, so it
- * reads as light falling on the desk). Clay is a warm rust used for revisions,
- * deliberately softer than an alarm red.
+ * Layered neutral grays (elevation = slightly lighter, never glow), hairline
+ * white-alpha borders, and monochrome actions: primary buttons are white on
+ * dark. Color is reserved for status only — green means an approved prompt,
+ * red means an error or a revision.
  */
 const config: Config = {
   content: [
@@ -16,59 +16,48 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Backgrounds — deep, blue-leaning ink. Low numbers are darkest.
+        // Surfaces — near-neutral warm grays, layered by elevation.
+        surface: {
+          DEFAULT: "#141413", // app ground
+          raised: "#1B1B1A", // cards, sidebar, composer
+          inset: "#252523", // hovers, user bubbles
+          well: "#0F0F0E", // code wells inside cards
+        },
+        // Hairline borders — white at low alpha.
+        line: {
+          DEFAULT: "#FFFFFF14",
+          strong: "#FFFFFF29",
+        },
+        // Text — soft white down to faint placeholders.
         ink: {
-          950: "#090D17", // sidebar / deepest insets
-          900: "#0E1422", // app ground
-          850: "#131B2B", // hover / raised
-          800: "#172132", // card surface
-          750: "#1C2739", // input surface
-          700: "#2A3850", // border
-          600: "#3A4A66", // strong border / divider
-          500: "#55657F", // muted glyphs
-          400: "#6E7E9A", // brighter muted glyphs
+          DEFAULT: "#EDEDEB",
+          soft: "#B9B9B3",
+          muted: "#8A8A84",
+          faint: "#61615C",
         },
-        // Text — warm creams and taupes, like draft paper under lamplight.
-        paper: {
-          bright: "#F4EFE3", // headings, wordmark
-          DEFAULT: "#D9D3C4", // body text
-          dim: "#9A958A", // secondary / labels
-          faint: "#6F6B61", // placeholders, very muted
+        // Status green — an approved prompt. Never a button color.
+        pine: {
+          DEFAULT: "#4CAB7D",
+          deep: "#2E7D57",
+          soft: "#4CAB7D1F",
         },
-        // Accent — lamplight. The single bold colour.
-        lamp: {
-          bright: "#F4B65A",
-          DEFAULT: "#E9A23B",
-          dim: "#C0832E",
-          deep: "#7A5520",
-        },
-        // Revisions / denials — warm rust, not a harsh red.
-        clay: {
-          bright: "#DD7B55",
-          DEFAULT: "#CB6543",
-          deep: "#6E3925",
+        // Errors and revision states only.
+        red: {
+          DEFAULT: "#E5695C",
+          deep: "#C94A3D",
+          soft: "#E5695C1A",
         },
       },
       fontFamily: {
-        // UI / body.
         sans: [
-          '"Hanken Grotesk"',
+          "Geist",
           "ui-sans-serif",
           "system-ui",
           "-apple-system",
           "sans-serif",
         ],
-        // Brand wordmark, eyebrows, and stamps — typewriter-draft character.
-        brand: [
-          '"Space Mono"',
-          "ui-monospace",
-          "SFMono-Regular",
-          "Menlo",
-          "monospace",
-        ],
-        // Reading mono — used only inside prompt code blocks and paths.
         mono: [
-          '"JetBrains Mono"',
+          '"Geist Mono"',
           "ui-monospace",
           "SFMono-Regular",
           "Menlo",

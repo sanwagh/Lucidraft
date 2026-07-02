@@ -362,7 +362,7 @@ export function Chat() {
             onClick={toggleSidebar}
             aria-label="Open sidebar"
             title="Open sidebar"
-            className="absolute left-3 top-3 z-10 hidden h-8 w-8 items-center justify-center rounded-lg border border-ink-700 bg-ink-850 text-ink-400 transition-colors duration-200 hover:bg-ink-800 hover:text-paper md:flex"
+            className="absolute left-3 top-3 z-10 hidden h-8 w-8 items-center justify-center rounded-md border border-line bg-surface-raised text-ink-muted transition-colors duration-150 hover:bg-surface-inset hover:text-ink md:flex"
           >
             <svg
               viewBox="0 0 24 24"
@@ -381,10 +381,10 @@ export function Chat() {
         {/* Transcript */}
         <div
           ref={scrollRef}
-          className="tandem-scroll tandem-grid flex-1 overflow-y-auto px-6 py-8"
+          className="tandem-scroll flex-1 overflow-y-auto px-6 py-8"
         >
           {showEmptyState ? (
-            <div className="mx-auto flex min-h-full w-full max-w-2xl flex-col items-center justify-center gap-9 pb-16">
+            <div className="mx-auto flex min-h-full w-full max-w-2xl flex-col items-center justify-center gap-7 pb-16">
               <EmptyState />
               <div className="w-full">
                 <ChatInput
@@ -428,7 +428,7 @@ export function Chat() {
               {loading && <ThinkingBubble />}
 
               {error && (
-                <div className="animate-rise rounded-xl border border-clay/40 bg-clay/10 px-4 py-3 text-sm text-clay-bright shadow-sm">
+                <div className="animate-rise rounded-lg border border-red/25 bg-red-soft px-4 py-3 text-sm text-red">
                   {error}
                 </div>
               )}
@@ -438,8 +438,8 @@ export function Chat() {
 
         {/* Composer — docks at the bottom once a conversation has started. */}
         {!showEmptyState && (
-          <div className="bg-ink-900 px-6 pb-7 pt-2">
-            <div className="animate-settle mx-auto w-full max-w-3xl">
+          <div className="bg-surface px-6 pb-6 pt-2">
+            <div className="mx-auto w-full max-w-3xl">
               <ChatInput
                 disabled={loading}
                 placeholder={denyAsked ? "Tell me what to change…" : "Reply…"}
@@ -456,21 +456,12 @@ export function Chat() {
 function EmptyState() {
   return (
     <div className="flex flex-col items-center px-6 text-center">
-      <span className="font-brand text-[10px] font-bold uppercase tracking-[0.35em] text-paper-faint">
-        Drafting desk for AI agents
-      </span>
-
-      <h1 className="mt-4 font-brand text-[3.25rem] font-bold leading-none tracking-tight text-paper-bright">
-        lucidraft<span className="animate-pulse text-lamp">_</span>
+      <h1 className="text-xl font-semibold tracking-tight text-ink">
+        Start with a rough idea
       </h1>
-
-      <p className="mt-5 text-lg font-medium text-paper-bright">
-        Rough idea in.{" "}
-        <span className="text-paper-dim">Polished prompt out.</span>
-      </p>
-      <p className="mt-2.5 max-w-sm text-sm leading-relaxed text-paper-dim">
-        Describe what you want — Lucidraft asks the right questions, drafts a
-        clean prompt, and you stamp it ready to run.
+      <p className="mt-2 max-w-md text-sm leading-relaxed text-ink-muted">
+        Lucidraft asks the right questions, then drafts a prompt Claude Code
+        can run with.
       </p>
     </div>
   );
@@ -480,9 +471,9 @@ function ThinkingBubble() {
   return (
     <div className="flex animate-rise justify-start">
       <div className="flex items-center gap-1.5 py-2">
-        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-lamp/70 [animation-delay:-0.3s]" />
-        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-lamp/70 [animation-delay:-0.15s]" />
-        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-lamp/70" />
+        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-ink-faint [animation-delay:-0.3s]" />
+        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-ink-faint [animation-delay:-0.15s]" />
+        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-ink-faint" />
       </div>
     </div>
   );
